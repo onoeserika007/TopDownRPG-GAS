@@ -6,6 +6,6 @@
 void UAuraUserWidget::SetWidgetController(UObject* InWidgetController)
 {
 	WidgetController = InWidgetController;
-	UE_LOG(LogTemp, Warning, TEXT("UAuraUserWidget::SetWidgetController - controller set."));
+	// UE_LOG(LogTemp, Warning, TEXT("UAuraUserWidget::SetWidgetController - controller set."));
 	OnWidgetControllerSet();
 }
