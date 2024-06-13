@@ -6,6 +6,7 @@
 #include "GameFramework/HUD.h"
 #include "AuraHUD.generated.h"
 
+class USpellMenuWidgetController;
 class UAttributeMenuWidgetController;
 class UAttributeSet;
 class UAbilitySystemComponent;
@@ -23,20 +24,31 @@ public:
 
 	UOverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& Params);
 	UAttributeMenuWidgetController* GetAttributeMenuWidgetController(const FWidgetControllerParams& Params);
+	USpellMenuWidgetController* GetSpellMenuWidgetController(const FWidgetControllerParams& Params);
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 protected:
 	virtual void BeginPlay() override;
 private:
 	// Overlay Widget | Controller
+	UPROPERTY()
 	TObjectPtr<UAuraUserWidget> OverlayWidget;
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UAuraUserWidget> OverlayWidgetClass;
+
+	UPROPERTY()
 	TObjectPtr<UOverlayWidgetController> OverlayWidgetController;
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UOverlayWidgetController> OverlayWidgetControllerClass;
 
-	// Attribute Menu
+	// Attribute Menu Controller
+	UPROPERTY()
 	TObjectPtr<UAttributeMenuWidgetController> AttributeMenuWidgetController;
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UAttributeMenuWidgetController> AttributeMenuWidgetControllerClass;
+
+	// Spell Menu Controller
+	UPROPERTY()
+	TObjectPtr<USpellMenuWidgetController> SpellMenuWidgetController;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<USpellMenuWidgetController> SpellMenuWidgetControllerClass;
 };

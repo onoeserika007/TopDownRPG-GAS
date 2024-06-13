@@ -34,9 +34,11 @@ float UMMC_MaxHealth::CalculateBaseMagnitude_Implementation(const FGameplayEffec
 	// in params of ApplyGameplayEffectSpecToTarget, only SpecHandle and Target - ASC, no source - object.
 	// We need to add SourceObject in GameplayEffectContextHandle.
 	// We only find source in context??
-	TScriptInterface<ICombatInterface> CombatInterface = Spec.GetContext().GetSourceObject();
-	check(CombatInterface);
-	const int32 PlayerLevel = CombatInterface->GetPlayerLevel();
+	int32 PlayerLevel = 1;
+	if (Spec.GetContext().GetSourceObject()->Implements<UCombatInterface>())
+	{
+		PlayerLevel = ICombatInterface::Execute_GetPlayerLevel(Spec.GetContext().GetSourceObject());
+	}
 
 	return 80.f + 2.5f * Vigor + 10.f * PlayerLevel;
 }

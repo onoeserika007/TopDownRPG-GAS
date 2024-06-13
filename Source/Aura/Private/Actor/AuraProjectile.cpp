@@ -9,6 +9,7 @@
 
 #include "AudioDevice.h"
 #include "NiagaraFunctionLibrary.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -49,27 +50,53 @@ void AAuraProjectile::BeginPlay()
 
 void AAuraProjectile::Destroyed()
 {
-	Super::Destroyed();
 	if (!bHit && !HasAuthority())
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation(), FRotator::ZeroRotator);
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
-		LoopingSoundComponent->Stop();
+		// Maybe the projectile has been destroyed before the LoopingSoundComponent can actually be constructed.
+		if (IsValid(LoopingSoundComponent))
+		{
+			LoopingSoundComponent->Stop();
+		}
 	}
+	// Do things before Super::Destroyed!!
+	Super::Destroyed();
 }
 
 void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                       UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation(), FRotator::ZeroRotator);
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
-	LoopingSoundComponent->Stop();
+	// Hit Self and only checks on server
+	// ???? Then the local testing is not working!!!
+	if (!DamageEffectSpecHandle.Data.IsValid() || DamageEffectSpecHandle.Data.Get()->GetContext().GetEffectCauser() == OtherActor)
+	{
+		return; 
+	}
 
+	const bool bIsFriend = UAuraAbilitySystemLibrary::IsFriend(DamageEffectSpecHandle.Data.Get()->GetContext().GetEffectCauser(), OtherActor);
+	if (bIsFriend)
+	{
+		return;
+	}
+	
+	if (!bHit)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation(), FRotator::ZeroRotator);
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
+		if (LoopingSoundComponent)
+		{
+			LoopingSoundComponent->Stop();
+		}
+	}
+
+	// we only apply this GameEffect on server
 	if (HasAuthority())
 	{
 		// The effect changes the attribute and the attribute itself is replicated via GAS
 		if (auto TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 		{
+			// const bool bIsFriend = UAuraAbilitySystemLibrary::IsFriend(DamageEffectSpecHandle.Data.Get()->GetContext().GetEffectCauser(), OtherActor);
 			if (DamageEffectSpecHandle.IsValid())
 			{
 				TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data);
@@ -79,6 +106,7 @@ void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, 
 	}
 	else
 	{
+		// indicate that Effect has been play on client
 		bHit = true;
 	}
 }

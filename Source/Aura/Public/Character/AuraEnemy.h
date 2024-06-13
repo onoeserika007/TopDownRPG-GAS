@@ -10,11 +10,13 @@
 #include "AuraEnemy.generated.h"
 
 class UWidgetComponent;
+class UBehaviorTree;
+class AAuraAIController;
 /**
  * 
  */
 UCLASS()
-class AURA_API AAuraEnemy : public AAuraCharacter, public IEnemyInterface
+class AURA_API AAuraEnemy : public AAuraCharacterBase, public IEnemyInterface
 {
 	GENERATED_BODY()
 public:
@@ -23,12 +25,15 @@ public:
 	*/
 	virtual void HighlightActor() override;
 	virtual void UnHighlightActor() override;
-
+	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;
+	virtual AActor* GetCombatTarget_Implementation() const override;
 	/**
 	 * Combat Interface
 	 */
-	virtual int32 GetPlayerLevel() const override;
+	virtual int32 GetPlayerLevel_Implementation() const override;
 	virtual void Die() override;
+
+	virtual void PossessedBy(AController* NewController) override;
 	
 	AAuraEnemy();
 
@@ -43,6 +48,15 @@ public:
 
 	void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 
+	UPROPERTY(BlueprintReadOnly, Category="Combat")
+	bool bHitReacting = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat")
+	float BaseWalkSpeed = 250.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category="Combat")
+	TObjectPtr<AActor> CombatTarget;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo() override;
@@ -52,17 +66,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Character Class Defaults")
 	int32 Level = 1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Character Class Defaults")
-	ECharacterClass CharacterClass {};
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UWidgetComponent> HealthBar;
 
-	UPROPERTY(BlueprintReadOnly, Category="Combat")
-	bool bHitReacting = false;
+	UPROPERTY(EditAnywhere, Category="AI")
+	TObjectPtr<UBehaviorTree> BehaviorTree;
 
-	UPROPERTY(BlueprintReadOnly, Category="Combat")
-	float BaseWalkSpeed = 250.0f;
-	
+	UPROPERTY()
+	TObjectPtr<AAuraAIController> AuraAIController;
 private:
 };

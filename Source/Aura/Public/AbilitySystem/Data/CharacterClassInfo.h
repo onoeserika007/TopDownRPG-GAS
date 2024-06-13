@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ScalableFloat.h"
 #include "Engine/DataAsset.h"
 #include "CharacterClassInfo.generated.h"
 
@@ -20,12 +21,18 @@ enum class ECharacterClass: uint8
 };
 
 USTRUCT()
-struct FCharacterDefaultInfo
+struct FCharacterClassDefaultInfo
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly, Category="Class Defaults")
 	TSubclassOf<UGameplayEffect> PrimaryAttributes;
+
+	UPROPERTY(EditDefaultsOnly, Category="Class Defaults")
+	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
+
+	UPROPERTY(EditDefaultsOnly, Category="Class Defaults")
+	FScalableFloat XPReward {};
 };
 
 /**
@@ -38,7 +45,7 @@ class AURA_API UCharacterClassInfo : public UDataAsset
 public:
 
 	UPROPERTY(EditDefaultsOnly, Category="Character Class Defaults")
-	TMap<ECharacterClass, FCharacterDefaultInfo> CharacterClassInfos;
+	TMap<ECharacterClass, FCharacterClassDefaultInfo> CharacterClassInfos;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Common Class Defaults")
 	TSubclassOf<UGameplayEffect> SecondaryAttributes;
@@ -52,5 +59,5 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category="Common Class Defaults")
 	TObjectPtr<UCurveTable> DamageCalculationCoefficients;
 
-	FCharacterDefaultInfo GetClassDefaultInfo(ECharacterClass CharacterClass);
+	FCharacterClassDefaultInfo GetClassDefaultInfo(ECharacterClass CharacterClass);
 };

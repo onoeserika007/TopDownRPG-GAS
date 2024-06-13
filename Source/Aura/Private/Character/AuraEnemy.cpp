@@ -11,6 +11,9 @@
 #include "Components/WidgetComponent.h"
 #include "UI/Widget/AuraUserWidget.h"
 #include "AuraGameplayTags.h"
+#include "AI/AuraAIController.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AAuraEnemy::AAuraEnemy()
@@ -29,6 +32,12 @@ AAuraEnemy::AAuraEnemy()
 
 	HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
 	HealthBar->SetupAttachment(GetRootComponent());
+
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = true;
+	
 }
 
 // HitReact by Tags Added or Removed
@@ -38,6 +47,11 @@ void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCou
 {
 	bHitReacting = NewCount > 0;
 	GetCharacterMovement()->MaxWalkSpeed = bHitReacting? 0.f : BaseWalkSpeed;
+	// AiController only valid on server, and AI's behavior is dominated by server.
+	if (AuraAIController && AuraAIController->GetBlackboardComponent())
+	{
+		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReacting);
+	}
 }
 
 void AAuraEnemy::BeginPlay()
@@ -46,7 +60,11 @@ void AAuraEnemy::BeginPlay()
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 	InitAbilityActorInfo();
-	UAuraAbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent);
+	if (HasAuthority())
+	{
+		// only valid on server
+		UAuraAbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent, CharacterClass);
+	}
 	
 
 	auto HealthBarWidget = Cast<UAuraUserWidget>(HealthBar->GetUserWidgetObject());
@@ -95,27 +113,64 @@ void AAuraEnemy::UnHighlightActor()
 	bHighlighted = false;
 }
 
-int32 AAuraEnemy::GetPlayerLevel() const
+void AAuraEnemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
+{
+	CombatTarget = InCombatTarget;
+}
+
+AActor* AAuraEnemy::GetCombatTarget_Implementation() const
+{
+	return CombatTarget;
+}
+
+int32 AAuraEnemy::GetPlayerLevel_Implementation() const
 {
 	return Level;
 }
 
 void AAuraEnemy::Die()
 {
+	if (HasAuthority())
+	{
+		AuraAIController = !IsValid(AuraAIController)? Cast<AAuraAIController>(GetController()) : AuraAIController;
+		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("IsDead"), true);
+	}
 	Super::Die();
+}
+
+void AAuraEnemy::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	// AI only exists on server
+	if (HasAuthority())
+	{
+		AuraAIController = Cast<AAuraAIController>(NewController);
+
+		check(BehaviorTree);
+		AuraAIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
+		AuraAIController->RunBehaviorTree(BehaviorTree);
+		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
+		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("RangedAttacker"), CharacterClass != ECharacterClass::Warrior);
+		AuraAIController->GetBlackboardComponent()->SetValueAsFloat(FName("MeleeAttackReach"), MeleeAttackReach);
+	}
 }
 
 void AAuraEnemy::InitAbilityActorInfo()
 {
 	Super::InitAbilityActorInfo();
-	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	AbilitySystemComponent->InitAbilityActorInfo( this, this);
 	Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent)->OnAbilityActorInfoSet();
 
 	// InitializeDefaultAttributes
-	InitializeDefaultAttributes();
+	// since dependent on CharacterClassInfo, on valid on server
+	if (HasAuthority())
+	{
+		InitializeDefaultAttributes();
+	}
 }
 
 void AAuraEnemy::InitializeDefaultAttributes() const
 {
-	UAuraAbilitySystemLibrary::InitializeDefaultAttributes(this, CharacterClass, GetPlayerLevel(), AbilitySystemComponent);
+	UAuraAbilitySystemLibrary::InitializeDefaultAttributes(this, CharacterClass, ICombatInterface::Execute_GetPlayerLevel(this), AbilitySystemComponent);
 }

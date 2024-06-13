@@ -118,6 +118,16 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 		FString("Input Tag for 4 key.")
 		);
 
+	GameplayTags.InputTag_Passive_1 = Manager.AddNativeGameplayTag(
+		FName("InputTag.Passive.1"),
+		FString("Input Tag for Passive Ability 1.")
+		);
+
+	GameplayTags.InputTag_Passive_2= Manager.AddNativeGameplayTag(
+		FName("InputTag.Passive.2"),
+		FString("Input Tag for Passive Ability 2.")
+		);
+
 	/**
 	 * Metas
 	 */
@@ -126,9 +136,194 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 		FString("Damage.")
 		);
 
+	GameplayTags.Attributes_Meta_IncomingXP = Manager.AddNativeGameplayTag(
+		FName("Attributes.Meta.IncomingXP"),
+		FString("Incoming XP Meta Attribute.")
+		);
+
+	/**
+	 * Damage Types
+	 */
+	GameplayTags.Damage_Fire = Manager.AddNativeGameplayTag(
+	FName("Damage.Fire"),
+	FString("Fire Damage.")
+	);
+
+	GameplayTags.Damage_Lightning = Manager.AddNativeGameplayTag(
+	FName("Damage.Lightning"),
+	FString("Lightning Damage.")
+	);
+	
+	GameplayTags.Damage_Arcane = Manager.AddNativeGameplayTag(
+	FName("Damage.Arcane"),
+	FString("Arcane Damage.")
+	);
+
+	GameplayTags.Damage_Physical = Manager.AddNativeGameplayTag(
+	FName("Damage.Physical"),
+	FString("Physical Damage.")
+	);
+
+	/**
+	 * Resistances
+	 */
+	GameplayTags.Attributes_Resistance_Fire = Manager.AddNativeGameplayTag(
+	FName("Attributes.Resistance.Fire"),
+	FString("Resistance to Fire Damage.")
+	);
+
+	GameplayTags.Attributes_Resistance_Lightning = Manager.AddNativeGameplayTag(
+	FName("Attributes.Resistance.Lightning"),
+	FString("Resistance to Lightning Damage.")
+	);
+
+	GameplayTags.Attributes_Resistance_Arcane = Manager.AddNativeGameplayTag(
+	FName("Attributes.Resistance.Arcane"),
+	FString("Resistance to Arcane Damage.")
+	);
+
+	GameplayTags.Attributes_Resistance_Physical = Manager.AddNativeGameplayTag(
+	FName("Attributes.Resistance.Physical"),
+	FString("Resistance to Physical Damage.")
+	);
+
+	
+	/**
+	 * Map of Damage Types to Resistances
+	 */
+	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Fire, GameplayTags.Attributes_Resistance_Fire);
+	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Lightning, GameplayTags.Attributes_Resistance_Lightning);
+	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Arcane, GameplayTags.Attributes_Resistance_Arcane);
+	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Physical, GameplayTags.Attributes_Resistance_Physical);
+
+	/**
+	 * Effects
+	 */
 	GameplayTags.Effects_HitReact = Manager.AddNativeGameplayTag(
 		FName("Effects.HitReact"),
 		FString("Tag granted when Hit Reacting.")
 		);
+
+	/**
+	 * Abilities
+	 */
+	GameplayTags.Abilities_None = Manager.AddNativeGameplayTag(
+		FName("Abilities.None"),
+		FString("None Ability - like the nullptr for Ability Tags.")
+		);
 	
+	GameplayTags.Abilities_Attack = Manager.AddNativeGameplayTag(
+		FName("Abilities.Attack"),
+		FString("Attack Ability Tag.")
+		);
+
+	GameplayTags.Abilities_Summon = Manager.AddNativeGameplayTag(
+		FName("Abilities.Summon"),
+		FString("Summon Ability Tag.")
+		);
+
+	GameplayTags.Abilities_HitReact = Manager.AddNativeGameplayTag(
+		FName("Abilities.HitReact"),
+		FString("HitReact Ability Tag.")
+		);
+
+	GameplayTags.Abilities_Status_Eligible = Manager.AddNativeGameplayTag(
+		FName("Abilities.Status.Eligible"),
+		FString("Eligible Status.")
+		);
+	GameplayTags.Abilities_Status_Equipped = Manager.AddNativeGameplayTag(
+		FName("Abilities.Status.Equipped"),
+		FString("Equipped Status.")
+		);
+	GameplayTags.Abilities_Status_Locked = Manager.AddNativeGameplayTag(
+		FName("Abilities.Status.Locked"),
+		FString("Locked Status.")
+		);
+	GameplayTags.Abilities_Status_Unlocked = Manager.AddNativeGameplayTag(
+		FName("Abilities.Status.Unlocked"),
+		FString("Unlocked Status.")
+		);
+
+	GameplayTags.Abilities_Type_None = Manager.AddNativeGameplayTag(
+		FName("Abilities.Type.None"),
+		FString("Type None.")
+		);
+	GameplayTags.Abilities_Type_Offensive = Manager.AddNativeGameplayTag(
+		FName("Abilities.Type.Offensive"),
+		FString("Type Offensive.")
+		);
+	GameplayTags.Abilities_Type_Passive = Manager.AddNativeGameplayTag(
+		FName("Abilities.Type.Passive"),
+		FString("Type Passive.")
+		);
+
+	// Damage Abilities 
+	GameplayTags.Abilities_Fire_FireBolt = Manager.AddNativeGameplayTag(
+		FName("Abilities.Fire.FireBolt"),
+		FString("FireBolt Ability Tag.")
+		);
+
+	GameplayTags.Abilities_Lightning_Electrocute = Manager.AddNativeGameplayTag(
+		FName("Abilities.Lightning.Electrocute"),
+		FString("Electrocute Ability Tag.")
+		);
+	
+	/**
+	 * Abilities Cooldowns
+	 */
+	GameplayTags.Cooldown_Fire_FireBolt = Manager.AddNativeGameplayTag(
+		FName("Cooldown.Fire.FireBolt"),
+		FString("FireBolt Cooldown Tag.")
+		);
+
+	GameplayTags.Cooldown_Lightning_Electrocute = Manager.AddNativeGameplayTag(
+		FName("Cooldown.Lightning.Electrocute"),
+		FString("Electrocute Cooldown Tag.")
+		);
+
+	/**
+	 * Combat Sockets
+	 */
+	GameplayTags.CombatSocket_Weapon = Manager.AddNativeGameplayTag(
+		FName("CombatSocket.Weapon"),
+		FString("Weapon.")
+		);
+
+	GameplayTags.CombatSocket_LeftHand = Manager.AddNativeGameplayTag(
+		FName("CombatSocket.LeftHand"),
+		FString("Left Hand.")
+		);
+
+	GameplayTags.CombatSocket_RightHand = Manager.AddNativeGameplayTag(
+		FName("CombatSocket.RightHand"),
+		FString("Right Hand.")
+		);
+	
+	GameplayTags.CombatSocket_Tail = Manager.AddNativeGameplayTag(
+		FName("CombatSocket.Tail"),
+		FString("Tail.")
+		);
+
+	/**
+	 * Montage
+	 */
+	GameplayTags.Montage_Attack_1 = Manager.AddNativeGameplayTag(
+		FName("Montage.Attack.1"),
+		FString("Attack 1.")
+		);
+
+	GameplayTags.Montage_Attack_2 = Manager.AddNativeGameplayTag(
+		FName("Montage.Attack.2"),
+		FString("Attack 2.")
+		);
+
+	GameplayTags.Montage_Attack_3 = Manager.AddNativeGameplayTag(
+		FName("Montage.Attack.3"),
+		FString("Attack 3.")
+		);
+
+	GameplayTags.Montage_Attack_4 = Manager.AddNativeGameplayTag(
+		FName("Montage.Attack.4"),
+		FString("Attack 4.")
+		);
 }

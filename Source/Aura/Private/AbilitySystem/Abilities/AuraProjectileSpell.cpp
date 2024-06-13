@@ -21,21 +21,26 @@ void UAuraProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	
 }
 
-void UAuraProjectileSpell::SpawnProjectile(const FVector& TargetLocation)
+void UAuraProjectileSpell::SpawnProjectile(const FVector& TargetLocation, const FGameplayTag& SocketTag, bool bOverridePitch, float PitchOverride)
 {
 	if (GetAvatarActorFromActorInfo()->HasAuthority())
 	{
-		TScriptInterface<ICombatInterface> CombatInterface = GetAvatarActorFromActorInfo(); // Who owns the ability
-		if (CombatInterface)
+		if (GetAvatarActorFromActorInfo()) // Who owns the ability
 		{
-			const FVector SocketLocation = CombatInterface->GetCombatSocketLocation();
+			const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(
+				GetAvatarActorFromActorInfo(),
+				SocketTag);
 			FRotator ToTargetRotation = (TargetLocation - SocketLocation).Rotation();
-			ToTargetRotation.Pitch = 0.f;
+			// ToTargetRotation.Pitch = 0.f; This may cause not hit on server when use dedicated server mode.
+			if (bOverridePitch)
+			{
+				ToTargetRotation.Pitch = PitchOverride;
+			}
 			
 			FTransform SpawnTransform;
-			SpawnTransform.SetLocation(CombatInterface->GetCombatSocketLocation());
+			SpawnTransform.SetLocation(SocketLocation);
 			SpawnTransform.SetRotation(ToTargetRotation.Quaternion());
-
+ 
 			/**
 			 *	SpawnActor: 无法在生成之后和初始化之前配置Actor。任何配置必须在PostInitializeComponents之后进行。
 			 *	SpawnActorDeferred: 允许在生成之后和初始化之前进行配置，使得你可以在Actor的生命周期早期设置属性。
@@ -67,9 +72,15 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& TargetLocation)
 			if (Projectile)
 			{
 				const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::GetInstance();
-				const float ScaledDamage = Damage.GetValueAtLevel(20.f); // Where dose the LEVEL come from?
-				// GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, FString::Printf(TEXT("FireBolt Damage: %f"), ScaledDamage));
-				UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Damage, ScaledDamage);
+
+				// Four Damage types, Execution can capture SetByCalled value by these DamageType Tags.
+				for (auto& [Tag, DamageTable]: DamageTypes)
+				{
+					const float ScaledDamage = DamageTable.GetValueAtLevel(GetAbilityLevel());
+					UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, Tag, ScaledDamage);
+				}
+
+				// When the projectile collide, only need to apply the GE;
 				Projectile->DamageEffectSpecHandle = SpecHandle;
 				Projectile->FinishSpawning(SpawnTransform);
 			}

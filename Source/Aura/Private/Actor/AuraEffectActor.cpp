@@ -27,6 +27,9 @@ void AAuraEffectActor::BeginPlay()
 
 void AAuraEffectActor::ApplyEffectToTarget(AActor* EffectTarget, const TSubclassOf<UGameplayEffect> GameplayEffectClass)
 {
+	// If overlap with enemy
+	if (EffectTarget->ActorHasTag(FName("Enemy")) && !bApplyEffectsToEnemies) return;
+	
 	if (const TScriptInterface<IAbilitySystemInterface> ASCInterface = EffectTarget)
 	{
 		if (const auto TargetASC = ASCInterface->GetAbilitySystemComponent())
@@ -43,7 +46,7 @@ void AAuraEffectActor::ApplyEffectToTarget(AActor* EffectTarget, const TSubclass
 				ActiveEffectHandles.Add(ActiveEffectHandle, TargetASC);
 			}
 
-			if (bDestroyOnEffectRemoval)
+			if (bDestroyOnEffectApplication && !bIsInfinite)
 			{
 				Destroy();
 			}
