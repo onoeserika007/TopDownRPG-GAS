@@ -12,6 +12,7 @@ class UAbilitySystemComponent;
 class UAttributeSet;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32 /*StatValue*/)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerLevelChanged, int32 /*Level*/, bool /*bShowMessage*/);
 /**
  * 
  */
@@ -40,8 +41,12 @@ public:
 	void AddToLevel(int32 InLevel);
 	void AddToAttributePoints(int32 InPoints);
 	void AddToSpellPoints(int32 InPoints);
+	
 	void SetXP(int32 InXP);
 	void SetLevel(int32 InLevel);
+	void SetLevelWithLevelUpMessage(int32 InLevel);
+	void SetAttributePoints(int32 InAttributePoints);
+	void SetSpellPoints(int32 InSpellPoints);
 protected:
 
 private:
@@ -62,7 +67,7 @@ private:
 	 */
 public:
 	FOnPlayerStatChanged OnXPChangedDelegate;
-	FOnPlayerStatChanged OnLevelChangedDelegate;
+	FOnPlayerLevelChanged OnLevelChangedDelegate;
 	FOnPlayerStatChanged OnAttributePointsChangedDelegate;
 	FOnPlayerStatChanged OnSpellPointsChangedDelegate;
 

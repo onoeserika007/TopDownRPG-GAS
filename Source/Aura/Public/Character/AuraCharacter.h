@@ -20,7 +20,11 @@ class AURA_API AAuraCharacter : public AAuraCharacterBase, public IPlayerInterfa
 public:
 	AAuraCharacter();
 
-	virtual void PossessedBy(AController* NewController) override;
+	/** 
+	 * Called when this Pawn is possessed. Only called on the server (or in standalone).
+	 * @param NewController The controller possessing this pawn
+	 */
+	virtual void PossessedBy(AController* NewController) override; // Override in APawn
 	virtual void OnRep_PlayerState() override;
 	virtual void InitAbilityActorInfo() override;
 
@@ -43,6 +47,16 @@ public:
 	virtual void AddToPlayerLevel_Implementation(int32 InPlayerLevel) override;
 	virtual int32 GetAttributePoints_Implementation() const override;
 	virtual int32 GetSpellPoints_Implementation() const override;
+	virtual void ShowMagicCircle_Implementation(UMaterialInterface* DecalMaterial) override;
+	virtual void HideMagicCircle_Implementation() override;
+	virtual void SaveProgress_Implementation(const FName& CheckpointTag) override;
+
+	// Reps
+	virtual void OnRep_Stun() override;
+	virtual void OnRep_Burn() override;
+
+	// Saved
+	void LoadProgress();
 private:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastLevelUpParticles() const;

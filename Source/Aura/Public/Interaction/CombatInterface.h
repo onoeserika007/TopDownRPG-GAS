@@ -10,6 +10,22 @@
 
 class UNiagaraSystem;
 class UAnimMontage;
+class UAbilitySystemComponent;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnASCRegisteredSignature, UAbilitySystemComponent*);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActorDeathSignature, AActor*, DeathActor);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnDamageSignature, float /*DamageAmount*/);
+
+// USTRUCT(BlueprintType)
+// struct FOnActorDeathDelegateHandle
+// {
+// 	GENERATED_BODY()
+//
+// 	FOnActorDeathDelegateHandle(FOnActorDeathSignature& InDelegate): Delegate(InDelegate) {}
+//
+// 	UPROPERTY(BlueprintAssignable)
+// 	FOnActorDeathSignature& Delegate;
+// };
 
 USTRUCT(BlueprintType)
 struct FTaggedMontage
@@ -60,7 +76,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	UAnimMontage* GetHitReactMontage();
 
-	virtual void Die() = 0;
+	virtual void Die(const FVector& DeathImpulse) = 0;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	bool IsDead() const;
@@ -85,4 +101,20 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	ECharacterClass GetCharacterClass();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void SetInShockLoop(bool bInLoop);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	USkeletalMeshComponent* GetWeapon();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	bool IsBeingShocked();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void SetIsBeingShocked(const bool bInIsBeingShocked);
+
+	virtual FOnASCRegisteredSignature& GetOnASCRegisteredDelegate() = 0;
+	virtual FOnActorDeathSignature& GetOnActorDeathDelegate() = 0;
+	virtual FOnDamageSignature& GetOnTakeDamageDelegate() = 0;
 };

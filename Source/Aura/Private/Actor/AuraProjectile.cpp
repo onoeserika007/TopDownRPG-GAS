@@ -34,7 +34,6 @@ AAuraProjectile::AAuraProjectile()
 	ProjectileMovement->InitialSpeed = 550.f;
 	ProjectileMovement->MaxSpeed = 550.0f;
 	ProjectileMovement->ProjectileGravityScale = 0.0f;
-	
 }
 
 // Called when the game starts or when spawned
@@ -43,22 +42,30 @@ void AAuraProjectile::BeginPlay()
 	Super::BeginPlay();
 
 	SetLifeSpan(LifeSpan);
+	// Replicates Movement.
+	SetReplicateMovement(true);
 	Sphere->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnSphereOverlap);
 
+	// Because it's a UObject, UPROPERTY() Macro is indispensable!!!
 	LoopingSoundComponent = UGameplayStatics::SpawnSoundAttached(LoopingSound, GetRootComponent());
+}
+
+void AAuraProjectile::PlayOnHitEffects() const
+{
+	UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation(), FRotator::ZeroRotator);
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
+	if (LoopingSoundComponent)
+	{
+		LoopingSoundComponent->Stop();
+		LoopingSoundComponent->DestroyComponent();
+	}
 }
 
 void AAuraProjectile::Destroyed()
 {
-	if (!bHit && !HasAuthority())
+	if (!bHit)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation(), FRotator::ZeroRotator);
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
-		// Maybe the projectile has been destroyed before the LoopingSoundComponent can actually be constructed.
-		if (IsValid(LoopingSoundComponent))
-		{
-			LoopingSoundComponent->Stop();
-		}
+		PlayOnHitEffects();
 	}
 	// Do things before Super::Destroyed!!
 	Super::Destroyed();
@@ -69,25 +76,15 @@ void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, 
 {
 	// Hit Self and only checks on server
 	// ???? Then the local testing is not working!!!
-	if (!DamageEffectSpecHandle.Data.IsValid() || DamageEffectSpecHandle.Data.Get()->GetContext().GetEffectCauser() == OtherActor)
-	{
-		return; 
-	}
-
-	const bool bIsFriend = UAuraAbilitySystemLibrary::IsFriend(DamageEffectSpecHandle.Data.Get()->GetContext().GetEffectCauser(), OtherActor);
-	if (bIsFriend)
-	{
-		return;
-	}
+	if (!DamageEffectParams.SourceAbilitySystemComponent) return; // Not on server
+	AActor* SourceAvatarActor = DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor();
+	if (SourceAvatarActor == OtherActor) return;
+	if (UAuraAbilitySystemLibrary::IsFriend(SourceAvatarActor, OtherActor)) return;
 	
 	if (!bHit)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation(), FRotator::ZeroRotator);
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
-		if (LoopingSoundComponent)
-		{
-			LoopingSoundComponent->Stop();
-		}
+		PlayOnHitEffects();
+		bHit = true;
 	}
 
 	// we only apply this GameEffect on server
@@ -96,18 +93,19 @@ void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, 
 		// The effect changes the attribute and the attribute itself is replicated via GAS
 		if (auto TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 		{
-			// const bool bIsFriend = UAuraAbilitySystemLibrary::IsFriend(DamageEffectSpecHandle.Data.Get()->GetContext().GetEffectCauser(), OtherActor);
-			if (DamageEffectSpecHandle.IsValid())
+			DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
+			DamageEffectParams.DeathImpulse = GetActorForwardVector() * DamageEffectParams.DeathImpulseMagnitude;
+			const bool bKnockback = FMath::FRandRange(0.f, 100.f) < DamageEffectParams.KnockbackChance;
+			if (bKnockback)
 			{
-				TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data);
+				FRotator Rotation = GetActorRotation();
+				Rotation.Pitch = 45.f;
+				const FVector KnockbackDirection = Rotation.Vector();
+				DamageEffectParams.KnockbackForce = KnockbackDirection * DamageEffectParams.KnockbackForceMagnitude;
 			}
+			UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
 		}
 		Destroy();
-	}
-	else
-	{
-		// indicate that Effect has been play on client
-		bHit = true;
 	}
 }
 

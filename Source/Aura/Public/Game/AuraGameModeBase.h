@@ -7,6 +7,9 @@
 #include "AuraGameModeBase.generated.h"
 
 
+class ULoadScreenSaveGame;
+class USaveGame;
+class UMVVM_LoadSlot;
 class UAbilityInfo;
 class UCharacterClassInfo;
 /**
@@ -22,4 +25,34 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category= "Ability Info")
 	TObjectPtr<UAbilityInfo> AbilityInfo;
+
+	// Actually, this SlotIndex means player index
+	void SaveSlotData(UMVVM_LoadSlot* LoadSlot, int32 SlotIndex) const;
+	static void DeleteSlotData(UMVVM_LoadSlot* LoadSlot, int32 SlotIndex);
+	ULoadScreenSaveGame* GetSaveSlotData(const FString& SlotName, int32 SlotIndex) const;
+	ULoadScreenSaveGame* RetrieveInGameSaveData();
+	void SaveInGameProgressData(ULoadScreenSaveGame* SaveObject);
+
+	void TravelToMapBySlot(UMVVM_LoadSlot* Slot);
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<USaveGame> LoadScreenSaveGameClass;
+
+	UPROPERTY(EditDefaultsOnly)
+	FString DefaultMapName;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSoftObjectPtr<UWorld> DefaultMap;
+
+	UPROPERTY(EditDefaultsOnly)
+	FName DefaultPlayerStartTag;
+	
+	// Lazy load
+	UPROPERTY(EditDefaultsOnly)
+	TMap<FString, TSoftObjectPtr<UWorld>> Maps;
+
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+
+protected:
+	virtual void BeginPlay() override;
 };

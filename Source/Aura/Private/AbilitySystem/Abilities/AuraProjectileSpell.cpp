@@ -52,12 +52,15 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& TargetLocation, const 
 				GetOwningActorFromActorInfo(),
 				Cast<APawn>(GetOwningActorFromActorInfo()),
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-				
+
+			/*
+			 * For Educational Purposes
 			// Deferred PostInitializeComponents
 			// TODO: Give the Projectile a Gameplay Effect Spec for causing Damage.
 
 			const auto SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
 			FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
+			
 			// Instigator(Owner) and EffectCauser(Avatar) are automatically set when MakeEffectContext.
 			EffectContextHandle.SetAbility(this); // Manually
 			EffectContextHandle.AddSourceObject(Projectile); // Manually
@@ -69,22 +72,19 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& TargetLocation, const 
 			EffectContextHandle.AddHitResult(HitResult);
 			
 			const auto SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), EffectContextHandle);
-			if (Projectile)
-			{
-				const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::GetInstance();
+			const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::GetInstance();
 
-				// Four Damage types, Execution can capture SetByCalled value by these DamageType Tags.
-				for (auto& [Tag, DamageTable]: DamageTypes)
-				{
-					const float ScaledDamage = DamageTable.GetValueAtLevel(GetAbilityLevel());
-					UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, Tag, ScaledDamage);
-				}
+			// Execution can capture SetByCalled value by DamageType Tags.
+			const float ScaledDamage = DamageTable.GetValueAtLevel(GetAbilityLevel());
+			UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, DamageTypeTag, ScaledDamage);
 
-				// When the projectile collide, only need to apply the GE;
-				Projectile->DamageEffectSpecHandle = SpecHandle;
-				Projectile->FinishSpawning(SpawnTransform);
-			}
+			// When the projectile collide, only need to apply the GE;
+			Projectile->DamageEffectSpecHandle = SpecHandle;
+			*/
 			
+			Projectile->DamageEffectParams = MakeDamageEffectParamsFromClassDefaults();
+			
+			Projectile->FinishSpawning(SpawnTransform);
 		}
 	}
 }

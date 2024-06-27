@@ -54,4 +54,20 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void LevelUp();
+
+	/**
+	 * MagicCircle
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void ShowMagicCircle(UMaterialInterface* DecalMaterial = nullptr);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void HideMagicCircle();
+
+	/**
+	 * Save progress
+	 */
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void SaveProgress(const FName& CheckpointTag);
 };

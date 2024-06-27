@@ -31,7 +31,7 @@ public:
 	 * Combat Interface
 	 */
 	virtual int32 GetPlayerLevel_Implementation() const override;
-	virtual void Die() override;
+	virtual void Die(const FVector& DeathImpulse) override;
 
 	virtual void PossessedBy(AController* NewController) override;
 	
@@ -51,11 +51,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Combat")
 	bool bHitReacting = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat")
-	float BaseWalkSpeed = 250.0f;
-
 	UPROPERTY(BlueprintReadOnly, Category="Combat")
 	TObjectPtr<AActor> CombatTarget;
+
+	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount) override;
 
 protected:
 	virtual void BeginPlay() override;

@@ -10,7 +10,11 @@
 #include "InputAction.h"
 #include "NavigationPath.h"
 #include "NavigationSystem.h"
+#include "NiagaraFunctionLibrary.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "Actor/MagicCircle.h"
+#include "Aura/Aura.h"
+#include "Components/DecalComponent.h"
 #include "Components/SplineComponent.h"
 #include "Input/AuraInputComponent.h"
 #include "Interaction/EnemyInterface.h"
@@ -28,8 +32,29 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 	CursorTrace();
-
 	AutoRun();
+	UpdateMagicCircleLocation();
+}
+
+void AAuraPlayerController::ShowMagicCircle(UMaterialInterface* DecalMaterial)
+{
+	if (!IsValid(MagicCircle))
+	{
+		MagicCircle = GetWorld()->SpawnActor<AMagicCircle>(MagicCircleClass);
+		if (DecalMaterial)
+		{
+			MagicCircle->MagicCircleDecal->SetMaterial(0, DecalMaterial);
+		}
+	}
+}
+
+void AAuraPlayerController::HideMagicCircle()
+{
+	if (IsValid(MagicCircle))
+	{
+		MagicCircle->Destroy();
+		MagicCircle = nullptr;
+	}
 }
 
 void AAuraPlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bBlockedHit, bool bCriticalHit)
@@ -105,6 +130,11 @@ void AAuraPlayerController::SetupInputComponent()
 // ReSharper disable once CppMemberFunctionMayBeConst
 void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 {
+	if (GetAsc() && GetAsc()->HasMatchingGameplayTag(FAuraGameplayTags::GetInstance().Player_Block_InputPressed))
+	{
+		return;
+	}
+	
 	const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
 
 	const FRotator YawRotation(0.f, GetControlRotation().Yaw, 0.f);
@@ -120,43 +150,66 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 
 void AAuraPlayerController::CursorTrace()
 {
-	GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, false, CursorHit);
-	if (CursorHit.bBlockingHit)
+	if (GetAsc() && GetAsc()->HasMatchingGameplayTag(FAuraGameplayTags::GetInstance().Player_Block_CursorTrace))
 	{
-		LastActor = ThisActor;
-		ThisActor = CursorHit.GetActor();
-		/**
-		 * Line trace from cursor. There are several scenarios:
-		 *	A. LastActor is null && ThisActor is null
-		 *		- Do nothing
-		 *	B. LastActor is null && ThisActor is valid
-		 *		- Hightlight ThisActor
-		 *	C. LastActor is valid && ThisActor is null
-		 *		- UnHighlight LastActor
-		 *	D. Both actors are valid, but LastActor != ThisActor
-		 *		- Hightlight ThisActor, and UnHighlight LastActor
-		 *	E. Both actors are valid, and are the same actor
-		 *		- Do nothing
-		 */
-		if (LastActor != ThisActor)
-		{
-			if (ThisActor) ThisActor->HighlightActor();
-			if (LastActor) LastActor->UnHighlightActor();
-		}
+		if (ThisActor) ThisActor->UnHighlightActor();
+		if (LastActor) LastActor->UnHighlightActor();
+		ThisActor = nullptr;
+		LastActor = nullptr;
+		return;
+	}
+
+	const ECollisionChannel TraceChannel = IsValid(MagicCircle)? ECC_Exclude_Players : ECollisionChannel::ECC_Visibility;
+	
+	GetHitResultUnderCursor(TraceChannel, false, CursorHit);
+	LastActor = ThisActor;
+	ThisActor = CursorHit.GetActor();
+	/**
+	 * Line trace from cursor. There are several scenarios:
+	 *	A. LastActor is null && ThisActor is null
+	 *		- Do nothing
+	 *	B. LastActor is null && ThisActor is valid
+	 *		- Hightlight ThisActor
+	 *	C. LastActor is valid && ThisActor is null
+	 *		- UnHighlight LastActor
+	 *	D. Both actors are valid, but LastActor != ThisActor
+	 *		- Hightlight ThisActor, and UnHighlight LastActor
+	 *	E. Both actors are valid, and are the same actor
+	 *		- Do nothing
+	 */
+	if (LastActor != ThisActor)
+	{
+		if (ThisActor) ThisActor->HighlightActor();
+		if (LastActor) LastActor->UnHighlightActor();
 	}
 }
 
 void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
+	if (GetAsc() && GetAsc()->HasMatchingGameplayTag(FAuraGameplayTags::GetInstance().Player_Block_InputPressed))
+	{
+		return;
+	}
+	
 	if (InputTag.MatchesTagExact(FAuraGameplayTags::GetInstance().InputTag_LMB))
 	{
 		bTargeting = ThisActor? true : false;
 		bAutoRunning = false; // since it's a short press
 	}
+
+	if (GetAsc())
+	{
+		GetAsc()->AbilityInputTagPressed(InputTag);
+	}
 }
 
 void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
+	if (GetAsc() && GetAsc()->HasMatchingGameplayTag(FAuraGameplayTags::GetInstance().Player_Block_InputReleased))
+	{
+		return;
+	}
+	
 	if (!InputTag.MatchesTagExact(FAuraGameplayTags::GetInstance().InputTag_LMB))
 	{
 		if (GetAsc())
@@ -171,7 +224,7 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 	
 	if (!bTargeting && !bShiftKeyDown)
 	{
-		if (FollowTime <= ShortPressThreshold)
+		if (FollowTime <= ShortPressThreshold) // Treat as click ground
 		{
 			if (APawn* ControlledPawn = GetPawn())
 			{
@@ -188,6 +241,11 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 					bAutoRunning = true;
 				}
 			}
+			
+			if (GetAsc() && !GetAsc()->HasMatchingGameplayTag(FAuraGameplayTags::GetInstance().Player_Block_InputPressed))
+			{
+				UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ClickNiagaraSystem, CachedDestination);
+			}
 		}
 		FollowTime = 0.0f;
 		bTargeting = false;
@@ -196,6 +254,11 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
+	if (GetAsc() && GetAsc()->HasMatchingGameplayTag(FAuraGameplayTags::GetInstance().Player_Block_InputHeld))
+	{
+		return;
+	}
+	
 	if (!InputTag.MatchesTagExact(FAuraGameplayTags::GetInstance().InputTag_LMB))
 	{
 		if (GetAsc())
@@ -216,6 +279,7 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 	}
 	else
 	{
+		// Since input trigger every frame???
 		FollowTime += GetWorld()->GetDeltaSeconds();
 		if (CursorHit.bBlockingHit)
 		{
@@ -239,4 +303,12 @@ UAuraAbilitySystemComponent* AAuraPlayerController::GetAsc()
 			);
 	}
 	return AuraAbilitySystemComponent;
+}
+
+void AAuraPlayerController::UpdateMagicCircleLocation()
+{
+	if (IsValid(MagicCircle))
+	{
+		MagicCircle->SetActorLocation(CursorHit.ImpactPoint);
+	}
 }

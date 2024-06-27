@@ -61,6 +61,7 @@ void UAuraWidgetController::BindCallbacksToDependencies()
 {
 }
 
+// It is this that initialize the spell menu every time when opened.
 void UAuraWidgetController::BroadcastAbilityInfo() const
 {
 	OnInitializeStartupAbilities(GetAuraAbilitySystemComponent());
@@ -75,6 +76,8 @@ void UAuraWidgetController::OnInitializeStartupAbilities(UAuraAbilitySystemCompo
 		BroadcastDelegate.BindLambda([this](const FGameplayAbilitySpec& AbilitySpec)
 		{
 			// TODO: need a way to figure out the ability tag for a given ability spec.
+			// Information about ability status is stored in ASC, ActivatableAbilities, on Spec.
+			// GetAbilityFromSpec here depends on AbilityTag in AbilitySpec.Ability->AbilityTags, so it's import to set ability tag on GA_ArcaneShards
 			FAuraAbilityInfo AuraAbilityInfo =  AbilityInfo->FindAbilityInfoForTag(UAuraAbilitySystemComponent::GetAbilityTagFromSpec(AbilitySpec));
 			AuraAbilityInfo.InputTag = UAuraAbilitySystemComponent::GetInputTagFromSpec(AbilitySpec);
 			AuraAbilityInfo.StatusTag = UAuraAbilitySystemComponent::GetStatusTagFromSpec(AbilitySpec);

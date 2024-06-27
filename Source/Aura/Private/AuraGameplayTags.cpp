@@ -4,11 +4,10 @@
 #include "AuraGameplayTags.h"
 #include "GameplayTagsManager.h"
 
-FAuraGameplayTags FAuraGameplayTags::GameplayTags {};
-
 void FAuraGameplayTags::InitializeNativeGameplayTags()
 {
 	auto& Manager = UGameplayTagsManager::Get();
+	FAuraGameplayTags& GameplayTags = FAuraGameplayTags::GetInstance();
 	/**
 	 * Primary
 	 */
@@ -129,6 +128,29 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 		);
 
 	/**
+	 * Player Inputs
+	 */
+	GameplayTags.Player_Block_CursorTrace= Manager.AddNativeGameplayTag(
+		FName("Player.Block.CursorTrace"),
+		FString("Block tracing under cursor.")
+		);
+	
+	GameplayTags.Player_Block_InputHeld= Manager.AddNativeGameplayTag(
+		FName("Player.Block.InputHeld"),
+		FString("Block Input Held callback for input.")
+		);
+	
+	GameplayTags.Player_Block_InputHeld= Manager.AddNativeGameplayTag(
+		FName("Player.Block.InputPressed"),
+		FString("Block Input Pressed callback for input.")
+		);
+
+	GameplayTags.Player_Block_InputReleased= Manager.AddNativeGameplayTag(
+		FName("Player.Block.InputReleased"),
+		FString("Block Input Released callback for input.")
+		);
+
+	/**
 	 * Metas
 	 */
 	GameplayTags.Damage = Manager.AddNativeGameplayTag(
@@ -186,16 +208,60 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 	FName("Attributes.Resistance.Physical"),
 	FString("Resistance to Physical Damage.")
 	);
-
 	
-	/**
-	 * Map of Damage Types to Resistances
-	 */
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Fire, GameplayTags.Attributes_Resistance_Fire);
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Lightning, GameplayTags.Attributes_Resistance_Lightning);
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Arcane, GameplayTags.Attributes_Resistance_Arcane);
 	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Physical, GameplayTags.Attributes_Resistance_Physical);
 
+	/**
+	 * Debuffs
+	 */
+	GameplayTags.Debuff_Burn = Manager.AddNativeGameplayTag(
+	FName("Debuff.Burn"),
+	FString("Debuff for fire damage.")
+	);
+
+	GameplayTags.Debuff_Stun = Manager.AddNativeGameplayTag(
+	FName("Debuff.Stun"),
+	FString("Debuff for lightning damage.")
+	);
+
+	GameplayTags.Debuff_Arcane = Manager.AddNativeGameplayTag(
+	FName("Debuff.Arcane"),
+	FString("Debuff for Arcane damage.")
+	);
+
+	GameplayTags.Debuff_Physical = Manager.AddNativeGameplayTag(
+	FName("Debuff.Physical"),
+	FString("Debuff for Physical damage.")
+	);
+
+	GameplayTags.DamageTypesToDebuffs.Add(GameplayTags.Damage_Fire, GameplayTags.Debuff_Burn);
+	GameplayTags.DamageTypesToDebuffs.Add(GameplayTags.Damage_Lightning, GameplayTags.Debuff_Stun);
+	GameplayTags.DamageTypesToDebuffs.Add(GameplayTags.Damage_Arcane, GameplayTags.Debuff_Arcane);
+	GameplayTags.DamageTypesToDebuffs.Add(GameplayTags.Damage_Physical, GameplayTags.Debuff_Physical);
+
+	GameplayTags.Debuff_Chance = Manager.AddNativeGameplayTag(
+	FName("Debuff.Chance"),
+	FString("Debuff Chance.")
+	);
+
+	GameplayTags.Debuff_Damage = Manager.AddNativeGameplayTag(
+	FName("Debuff.Damage"),
+	FString("Debuff Damage.")
+	);
+
+	GameplayTags.Debuff_Duration = Manager.AddNativeGameplayTag(
+	FName("Debuff.Duration"),
+	FString("Debuff Duration.")
+	);
+
+	GameplayTags.Debuff_Frequency = Manager.AddNativeGameplayTag(
+	FName("Debuff.Frequency"),
+	FString("Debuff Frequency.")
+	);
+	
 	/**
 	 * Effects
 	 */
@@ -244,6 +310,9 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 		FString("Unlocked Status.")
 		);
 
+	/**
+	 * Ability Types
+	 */
 	GameplayTags.Abilities_Type_None = Manager.AddNativeGameplayTag(
 		FName("Abilities.Type.None"),
 		FString("Type None.")
@@ -256,16 +325,46 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 		FName("Abilities.Type.Passive"),
 		FString("Type Passive.")
 		);
-
-	// Damage Abilities 
+	
+	/**
+	 * Offensive Abilities
+	 */
 	GameplayTags.Abilities_Fire_FireBolt = Manager.AddNativeGameplayTag(
 		FName("Abilities.Fire.FireBolt"),
 		FString("FireBolt Ability Tag.")
 		);
 
+	GameplayTags.Abilities_Fire_FireBlast = Manager.AddNativeGameplayTag(
+		FName("Abilities.Fire.FireBlast"),
+		FString("FireBlast Ability Tag.")
+		);
+
 	GameplayTags.Abilities_Lightning_Electrocute = Manager.AddNativeGameplayTag(
 		FName("Abilities.Lightning.Electrocute"),
 		FString("Electrocute Ability Tag.")
+		);
+
+	GameplayTags.Abilities_Arcane_ArcaneShards = Manager.AddNativeGameplayTag(
+		FName("Abilities.Arcane.ArcaneShards"),
+		FString("ArcaneShards Ability Tag.")
+		);
+	
+	/**
+	 * Passive Abilities
+	 */
+	GameplayTags.Abilities_Passive_HaloOfProtection = Manager.AddNativeGameplayTag(
+		FName("Abilities.Passive.HaloOfProtection"),
+		FString("Halo Of Protection.")
+		);
+
+	GameplayTags.Abilities_Passive_LifeSiphon = Manager.AddNativeGameplayTag(
+		FName("Abilities.Passive.LifeSiphon"),
+		FString("Life Siphon.")
+		);
+	
+	GameplayTags.Abilities_Passive_ManaSiphon = Manager.AddNativeGameplayTag(
+		FName("Abilities.Passive.ManaSiphon"),
+		FString("Mana Siphon.")
 		);
 	
 	/**
@@ -276,9 +375,19 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 		FString("FireBolt Cooldown Tag.")
 		);
 
+	GameplayTags.Cooldown_Fire_FireBlast = Manager.AddNativeGameplayTag(
+		FName("Cooldown.Fire.FireBlast"),
+		FString("FireBlast Cooldown Tag.")
+		);
+
 	GameplayTags.Cooldown_Lightning_Electrocute = Manager.AddNativeGameplayTag(
 		FName("Cooldown.Lightning.Electrocute"),
 		FString("Electrocute Cooldown Tag.")
+		);
+
+	GameplayTags.Cooldown_Arcane_ArcaneShards = Manager.AddNativeGameplayTag(
+		FName("Cooldown.Arcane.ArcaneShards"),
+		FString("ArcaneShards Cooldown Tag.")
 		);
 
 	/**
@@ -325,5 +434,13 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Montage_Attack_4 = Manager.AddNativeGameplayTag(
 		FName("Montage.Attack.4"),
 		FString("Attack 4.")
+		);
+	
+	/**
+	 * GameplayCue
+	 */
+	GameplayTags.GameplayCue_FireBlast = Manager.AddNativeGameplayTag(
+		FName("GameplayCue.FireBlast"),
+		FString("GameplayCue FireBlast")
 		);
 }

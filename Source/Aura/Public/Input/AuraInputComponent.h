@@ -41,7 +41,7 @@ void UAuraInputComponent::BindAbilityActions(const UAuraInputConfig* InputConfig
 			
 			if (HeldFunc)
 			{
-				// Pass that InputTag
+				// Pass that InputTag by Parameter
 				BindAction(Action.InputAction, ETriggerEvent::Triggered, Object, HeldFunc, Action.InputTag);
 			}
 		}

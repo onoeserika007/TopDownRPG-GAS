@@ -54,11 +54,23 @@ void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCou
 	}
 }
 
+void AAuraEnemy::StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	Super::StunTagChanged(CallbackTag, NewCount);
+
+	// AiController only valid on server, and AI's behavior is dominated by server.
+	if (AuraAIController && AuraAIController->GetBlackboardComponent())
+	{
+		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("IsStunned"), bIsStunned);
+	}
+}
+
 void AAuraEnemy::BeginPlay()
 {
 	Super::BeginPlay();
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
+	
 	InitAbilityActorInfo();
 	if (HasAuthority())
 	{
@@ -128,14 +140,14 @@ int32 AAuraEnemy::GetPlayerLevel_Implementation() const
 	return Level;
 }
 
-void AAuraEnemy::Die()
+void AAuraEnemy::Die(const FVector& DeathImpulse)
 {
+	Super::Die(DeathImpulse);
 	if (HasAuthority())
 	{
 		AuraAIController = !IsValid(AuraAIController)? Cast<AAuraAIController>(GetController()) : AuraAIController;
 		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("IsDead"), true);
 	}
-	Super::Die();
 }
 
 void AAuraEnemy::PossessedBy(AController* NewController)
@@ -168,6 +180,9 @@ void AAuraEnemy::InitAbilityActorInfo()
 	{
 		InitializeDefaultAttributes();
 	}
+
+	OnASCRegisteredDelegate.Broadcast(AbilitySystemComponent);
+	AbilitySystemComponent->RegisterGameplayTagEvent(FAuraGameplayTags::GetInstance().Debuff_Stun, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &AAuraEnemy::StunTagChanged);
 }
 
 void AAuraEnemy::InitializeDefaultAttributes() const

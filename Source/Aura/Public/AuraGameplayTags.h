@@ -14,7 +14,12 @@
 struct  FAuraGameplayTags
 {
 public:
- static const FAuraGameplayTags& GetInstance() { return GameplayTags;}
+ static FAuraGameplayTags& GetInstance()
+ {
+  static FAuraGameplayTags GameplayTags {};
+  return GameplayTags;
+ }
+ 
  static void InitializeNativeGameplayTags();
  /**
   * Primary Attributes
@@ -52,6 +57,14 @@ public:
  FGameplayTag InputTag_Passive_2;
 
  /**
+  * Player
+  */
+ FGameplayTag Player_Block_InputPressed;
+ FGameplayTag Player_Block_InputHeld;
+ FGameplayTag Player_Block_InputReleased;
+ FGameplayTag Player_Block_CursorTrace;
+
+ /**
   * Metas
   */
  FGameplayTag Damage; // This tag used to set damage by caller, now is substituted by Damage.Fire etc.
@@ -76,6 +89,21 @@ public:
  TMap<FGameplayTag, FGameplayTag> DamageTypesToResistances;
 
  /**
+  * Debuffs
+  */
+ FGameplayTag Debuff_Burn;
+ FGameplayTag Debuff_Stun;
+ FGameplayTag Debuff_Arcane;
+ FGameplayTag Debuff_Physical;
+
+ FGameplayTag Debuff_Chance;
+ FGameplayTag Debuff_Damage;
+ FGameplayTag Debuff_Duration;
+ FGameplayTag Debuff_Frequency;
+
+ TMap<FGameplayTag, FGameplayTag> DamageTypesToDebuffs;
+
+ /**
   * Effects
   */
  FGameplayTag Effects_HitReact;
@@ -98,13 +126,21 @@ public:
  FGameplayTag Abilities_Type_None;
  
  FGameplayTag Abilities_Fire_FireBolt;
+ FGameplayTag Abilities_Fire_FireBlast;
  FGameplayTag Abilities_Lightning_Electrocute;
+ FGameplayTag Abilities_Arcane_ArcaneShards;
+
+ FGameplayTag Abilities_Passive_HaloOfProtection;
+ FGameplayTag Abilities_Passive_LifeSiphon;
+ FGameplayTag Abilities_Passive_ManaSiphon;
  
  /**
   * Ability Cooldowns
   */
  FGameplayTag Cooldown_Fire_FireBolt;
+ FGameplayTag Cooldown_Fire_FireBlast;
  FGameplayTag Cooldown_Lightning_Electrocute;
+ FGameplayTag Cooldown_Arcane_ArcaneShards;
  
 
  /**
@@ -122,7 +158,15 @@ public:
  FGameplayTag Montage_Attack_2;
  FGameplayTag Montage_Attack_3;
  FGameplayTag Montage_Attack_4;
+
+ /**
+  * Gameplay Cues
+  */
+ FGameplayTag GameplayCue_FireBlast;
+
 protected:
 private:
- static FAuraGameplayTags GameplayTags;
+ FAuraGameplayTags() {}
+ FAuraGameplayTags(const FAuraGameplayTags& Other) = delete;
+ FAuraGameplayTags& operator=(const FAuraGameplayTags& Other) = delete;
 };

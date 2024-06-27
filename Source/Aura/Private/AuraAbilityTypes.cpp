@@ -46,9 +46,57 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 		{
 			RepBits |= 1 << 8;
 		}
+		if (bHasSuccessfulDebuff)
+		{
+			RepBits |= 1 << 9;
+		}
+		if (bIsDebuff)
+		{
+			RepBits |= 1 << 10;
+		}
+		if (DebuffDamage > 0.f)
+		{
+			RepBits |= 1 << 11;
+		}
+		if (DebuffDuration > 0.f)
+		{
+			RepBits |= 1 << 12;
+		}
+		if (DebuffFrequency > 0.f)
+		{
+			RepBits |= 1 << 13;
+		}
+		if (DamageType.IsValid())
+		{
+			RepBits |= 1 << 14;
+		}
+		if (!DeathImpulse.IsZero())
+		{
+			RepBits |= 1 << 15;
+		}
+		if (!KnockbackForce.IsZero())
+		{
+			RepBits |= 1 << 16;
+		}
+		if (bIsRadialDamage)
+		{
+			RepBits |= 1 << 17;
+		}
+		if (RadialDamageInnerRadius > 0.f)
+		{
+			RepBits |= 1 << 18;
+		}
+		if (RadialDamageOuterRadius > 0.f)
+		{
+			RepBits |= 1 << 19;
+		}
+		if (!RadialDamageOrigin.IsZero())
+		{
+			RepBits |= 1 << 20;
+		}
 	}
 
-	Ar.SerializeBits(&RepBits, 9);
+	Ar.SerializeBits(&RepBits, 20);
 
 	if (RepBits & (1 << 0))
 	{
@@ -74,6 +122,7 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 	{
 		if (Ar.IsLoading())
 		{
+			// UnSerializing, make sure that the Pointer is valid to receive the result.
 			if (!HitResult.IsValid())
 			{
 				HitResult = TSharedPtr<FHitResult>(new FHitResult());
@@ -98,6 +147,63 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bo
 	{
 		Ar << bIsBlockedHit;
 	}
+	if (RepBits & (1 << 9))
+	{
+		Ar << bHasSuccessfulDebuff;
+	}
+	if (RepBits & (1 << 10))
+	{
+		Ar << bIsDebuff;
+	}
+	if (RepBits & (1 << 11))
+	{
+		Ar << DebuffDamage;
+	}
+	if (RepBits & (1 << 12))
+	{
+		Ar << DebuffDuration;
+	}
+	if (RepBits & (1 << 13))
+	{
+		Ar << DebuffFrequency;
+	}
+	if (RepBits & (1 << 14))
+	{
+		// So why use shared pointer here???
+		if (Ar.IsLoading())
+		{
+			if (!DamageType.IsValid())
+			{
+				DamageType = MakeShared<FGameplayTag>();
+			}
+		}
+		DamageType->NetSerialize(Ar, Map, bOutSuccess);
+	}
+	if (RepBits & (1 << 15))
+	{
+		DeathImpulse.NetSerialize(Ar, Map, bOutSuccess);
+	}
+	if (RepBits & (1 << 16))
+	{
+		KnockbackForce.NetSerialize(Ar, Map, bOutSuccess);
+	}
+	if (RepBits & (1 << 17))
+	{
+		Ar << bIsRadialDamage;
+	}
+	if (RepBits & (1 << 18))
+	{
+		Ar << RadialDamageInnerRadius;
+	}
+	if (RepBits & (1 << 19))
+	{
+		Ar << RadialDamageOuterRadius;
+	}
+	if (RepBits & (1 << 20))
+	{
+		RadialDamageOrigin.NetSerialize(Ar, Map, bOutSuccess);
+	}
+	
 
 	if (Ar.IsLoading())
 	{
@@ -116,6 +222,10 @@ FAuraGameplayEffectContext* FAuraGameplayEffectContext::Duplicate() const
 	{
 		// Dose a deep copy of the hit result
 		NewContext->AddHitResult(*GetHitResult(), true);
+	}
+	if (DamageType.IsValid())
+	{
+		NewContext->DamageType = MakeShared<FGameplayTag>(*DamageType);
 	}
 	return NewContext;
 }

@@ -4,12 +4,21 @@
 #include "Character/AuraCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "AuraGameplayTags.h"
 #include "NiagaraComponent.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
+#include "AbilitySystem/AuraAttributeSet.h"
+#include "AbilitySystem/Data/AbilityInfo.h"
 #include "AbilitySystem/Data/LevelUpInfo.h"
+#include "AbilitySystem/Debuff/DebuffNiagaraComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Game/AuraGameInstance.h"
+#include "Game/AuraGameModeBase.h"
+#include "Game/LoadScreenSaveGame.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
 #include "UI/HUD/AuraHUD.h"
@@ -53,10 +62,19 @@ void AAuraCharacter::InitAbilityActorInfo()
 	{
 		AuraPlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(AuraPlayerState, this);
 		AbilitySystemComponent = AuraPlayerState->GetAbilitySystemComponent();
+		// Now ASC is initialized on AvatarActor
+		// ASC和OverlayWidgetController之间有同步机制，但是Controller和UI之间却没有同步机制。
+		// 在Client和Server的模式下，ActiveAbilitiesRep和本地SetController是异步的
+		// 如果把这几行代码往下挪一点，就会导致在UI绑定到AbilityInfoDelegate之前就产生了StartupAbility的广播
 		auto AuraAbilitySystemComponent = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent);
 		AuraAbilitySystemComponent->OnAbilityActorInfoSet();
+		OnASCRegisteredDelegate.Broadcast(AbilitySystemComponent);
+		AbilitySystemComponent->RegisterGameplayTagEvent(FAuraGameplayTags::GetInstance().Debuff_Stun, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &AAuraCharacter::StunTagChanged);
+		
 		AttributeSet = AuraPlayerState->GetAttributeSet();
-		InitializeDefaultAttributes();
+
+		
+		// InitializeDefaultAttributes(); Now load from disk instead
 
 		if (AAuraPlayerController* AuraPlayerController = Cast<AAuraPlayerController>(GetController()))
 		{
@@ -191,12 +209,164 @@ int32 AAuraCharacter::GetSpellPoints_Implementation() const
 	return 0;
 }
 
+void AAuraCharacter::ShowMagicCircle_Implementation(UMaterialInterface* DecalMaterial)
+{
+	if (AAuraPlayerController* AuraPlayerController = Cast<AAuraPlayerController>(GetController()))
+	{
+		AuraPlayerController->ShowMagicCircle(DecalMaterial);
+		AuraPlayerController->bShowMouseCursor = false;
+	}
+}
+
+void AAuraCharacter::HideMagicCircle_Implementation()
+{
+	if (AAuraPlayerController* AuraPlayerController = Cast<AAuraPlayerController>(GetController()))
+	{
+		AuraPlayerController->HideMagicCircle();
+		AuraPlayerController->bShowMouseCursor = true;
+	}
+}
+
+void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
+{
+	// This has already restricted execution obn server
+	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
+	if (IsValid(AuraGameMode))
+	{
+		ULoadScreenSaveGame* SaveData = AuraGameMode->RetrieveInGameSaveData();
+		if (SaveData == nullptr) return;
+
+		SaveData->PlayerStartTag = CheckpointTag;
+
+		if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
+		{
+			SaveData->PlayerLevel = AuraPlayerState->GetPlayerLevel();
+			SaveData->XP = AuraPlayerState->GetXP();
+			SaveData->AttributePoints = AuraPlayerState->GetAttributePoints();
+			SaveData->SpellPoints = AuraPlayerState->GetSpellPoints();
+		}
+
+		SaveData->Strength = UAuraAttributeSet::GetStrengthAttribute().GetNumericValue(GetAttributeSet());
+		SaveData->Intelligence = UAuraAttributeSet::GetIntelligenceAttribute().GetNumericValue(GetAttributeSet());
+		SaveData->Resilience = UAuraAttributeSet::GetResilienceAttribute().GetNumericValue(GetAttributeSet());
+		SaveData->Vigor = UAuraAttributeSet::GetVigorAttribute().GetNumericValue(GetAttributeSet());
+
+		SaveData->bFirstTimeLoadIn = false;
+
+		UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent());
+		FForEachAbility SaveAbilityDelegate;
+		SaveData->SavedAbilities.Empty(); // Clear old abilities
+		SaveAbilityDelegate.BindLambda([this, AuraASC, &SaveData](const FGameplayAbilitySpec& AbilitySpec)
+		{
+			FGameplayTag AbilityTag = UAuraAbilitySystemComponent::GetAbilityTagFromSpec(AbilitySpec);
+			UAbilityInfo* AbilityInfos = UAuraAbilitySystemLibrary::GetAbilityInfo(this);
+			FAuraAbilityInfo Info = AbilityInfos->FindAbilityInfoForTag(AbilityTag);
+
+			FSavedAbility SavedAbility {};
+			SavedAbility.GameplayAbility = Info.Ability;
+			SavedAbility.AbilityLevel = AbilitySpec.Level;
+			SavedAbility.AbilitySlot = AuraASC->GetInputTagFromAbilityTag(AbilityTag);
+			SavedAbility.AbilityStatus = AuraASC->GetStatusFromAbilityTag(AbilityTag);
+			SavedAbility.AbilityTag = AbilityTag;
+			SavedAbility.AbilityType = Info.AbilityTag;
+
+			SaveData->SavedAbilities.AddUnique(SavedAbility);
+		});
+
+		AuraASC->ForEachAbility(SaveAbilityDelegate);
+
+		AuraGameMode->SaveInGameProgressData(SaveData);
+	}
+}
+
+void AAuraCharacter::OnRep_Stun()
+{
+	Super::OnRep_Stun();
+
+	// Since DebuffEffect made from C++ can't be replicated, so we have to handle GameplayTags manually.
+	
+	if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent))
+	{
+		const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::GetInstance();
+		FGameplayTagContainer BlockedTags;
+		BlockedTags.AddTag(GameplayTags.Player_Block_CursorTrace);
+		BlockedTags.AddTag(GameplayTags.Player_Block_InputHeld);
+		BlockedTags.AddTag(GameplayTags.Player_Block_InputPressed);
+		BlockedTags.AddTag(GameplayTags.Player_Block_InputReleased);
+		
+		/** 	 
+		 *  Allows GameCode to add loose gameplaytags which are not backed by a GameplayEffect. 
+		 *	Tags added this way are not replicated! Use the 'Replicated' versions of these functions if replication is needed.
+		 *	It is up to the calling GameCode to make sure these tags are added on clients/server where necessary
+		 */
+		if (bIsStunned)
+		{
+			AuraASC->AddLooseGameplayTags(BlockedTags);
+			StunDebuffComponent->Activate();
+		}
+		else
+		{
+			AuraASC->RemoveLooseGameplayTags(BlockedTags);
+			StunDebuffComponent->Deactivate();
+		}
+	}
+}
+
+void AAuraCharacter::OnRep_Burn()
+{
+	Super::OnRep_Burn();
+
+	if (bIsStunned)
+	{
+		BurnDebuffComponent->Activate();
+	}
+	else
+	{
+		BurnDebuffComponent->Deactivate();
+	}
+}
+
 void AAuraCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	// Init ability actor info for the server
 	InitAbilityActorInfo();
-	AddCharacterAbilities();
+	LoadProgress();
+}
+
+void AAuraCharacter::LoadProgress()
+{
+	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
+	if (IsValid(AuraGameMode))
+	{
+		ULoadScreenSaveGame* SaveData = AuraGameMode->RetrieveInGameSaveData();
+		if (SaveData == nullptr) return;
+
+		if (SaveData->bFirstTimeLoadIn)
+		{
+			InitializeDefaultAttributes();
+			AddCharacterAbilities();
+		}
+		else
+		{
+			// TODO: Load in Abilities from disk.
+			// AddCharacterAbilities();
+			UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent());
+			if (AuraASC)
+			{
+				AuraASC->AddCharacterAbilitiesFromSavedData(SaveData);
+			}
+			
+			if (AAuraPlayerState* AuraPlayerState = Cast<AAuraPlayerState>(GetPlayerState()))
+			{
+				AuraPlayerState->SetLevel(SaveData->PlayerLevel);
+				AuraPlayerState->SetXP(SaveData->XP);
+				AuraPlayerState->SetAttributePoints(SaveData->AttributePoints);
+				AuraPlayerState->SetLevel(SaveData->PlayerLevel);
+			}
+			UAuraAbilitySystemLibrary::InitializeDefaultAttributesFromSaveData(this, GetAbilitySystemComponent(), SaveData);
+		}
+	}
 }
 
 void AAuraCharacter::OnRep_PlayerState()

@@ -29,9 +29,9 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 	AAuraPlayerState* AuraPS = GetAuraPlayerState();
 	AuraPS->OnXPChangedDelegate.AddUObject(this, &ThisClass::OnXPChanged);
 	AuraPS->OnLevelChangedDelegate.AddLambda(
-		[this](int32 NewLevel)
+		[this](int32 NewLevel, bool bShowMessage)
 		{
-			OnPlayerLevelChangedDelegate.Broadcast(NewLevel);
+			OnPlayerLevelChangedDelegate.Broadcast(NewLevel, bShowMessage);
 		});
 	
 	UAuraAbilitySystemComponent* AuraASC = GetAuraAbilitySystemComponent();
