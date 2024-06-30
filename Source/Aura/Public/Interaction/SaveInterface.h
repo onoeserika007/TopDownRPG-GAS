@@ -4,11 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "EnemyInterface.generated.h"
+#include "SaveInterface.generated.h"
 
 // This class does not need to be modified.
-UINTERFACE(MinimalAPI, BlueprintType)
-class UEnemyInterface : public UInterface
+UINTERFACE(MinimalAPI)
+class USaveInterface : public UInterface
 {
 	GENERATED_BODY()
 };
@@ -16,7 +16,7 @@ class UEnemyInterface : public UInterface
 /**
  * 
  */
-class AURA_API IEnemyInterface
+class AURA_API ISaveInterface
 {
 	GENERATED_BODY()
 
@@ -24,8 +24,8 @@ class AURA_API IEnemyInterface
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void SetCombatTarget(AActor* InCombatTarget);
+	bool ShouldLoadTransform();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	AActor* GetCombatTarget() const;
+	void LoadActor();
 };

@@ -19,6 +19,7 @@
 #include "Input/AuraInputComponent.h"
 #include "Interaction/EnemyInterface.h"
 #include "GameFramework/Character.h"
+#include "Interaction/HighlightInterface.h"
 #include "UI/Widget/DamageTextComponent.h"
 
 AAuraPlayerController::AAuraPlayerController()
@@ -152,8 +153,8 @@ void AAuraPlayerController::CursorTrace()
 {
 	if (GetAsc() && GetAsc()->HasMatchingGameplayTag(FAuraGameplayTags::GetInstance().Player_Block_CursorTrace))
 	{
-		if (ThisActor) ThisActor->UnHighlightActor();
-		if (LastActor) LastActor->UnHighlightActor();
+		if (ThisActor) IHighlightInterface::Execute_HighlightActor(ThisActor);
+		if (LastActor) IHighlightInterface::Execute_UnHighlightActor(LastActor);
 		ThisActor = nullptr;
 		LastActor = nullptr;
 		return;
@@ -163,7 +164,14 @@ void AAuraPlayerController::CursorTrace()
 	
 	GetHitResultUnderCursor(TraceChannel, false, CursorHit);
 	LastActor = ThisActor;
-	ThisActor = CursorHit.GetActor();
+	if (IsValid(CursorHit.GetActor()) && CursorHit.GetActor()->Implements<UHighlightInterface>())
+	{
+		ThisActor = CursorHit.GetActor();
+	}
+	else
+	{
+		ThisActor = nullptr;
+	}
 	/**
 	 * Line trace from cursor. There are several scenarios:
 	 *	A. LastActor is null && ThisActor is null
@@ -179,8 +187,8 @@ void AAuraPlayerController::CursorTrace()
 	 */
 	if (LastActor != ThisActor)
 	{
-		if (ThisActor) ThisActor->HighlightActor();
-		if (LastActor) LastActor->UnHighlightActor();
+		if (ThisActor) IHighlightInterface::Execute_HighlightActor(ThisActor);
+		if (LastActor) IHighlightInterface::Execute_UnHighlightActor(LastActor);
 	}
 }
 
@@ -193,7 +201,14 @@ void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 	
 	if (InputTag.MatchesTagExact(FAuraGameplayTags::GetInstance().InputTag_LMB))
 	{
-		bTargeting = ThisActor? true : false;
+		if (IsValid(ThisActor))
+		{
+			TargetingStatus = ThisActor->Implements<UEnemyInterface>() ? ETargetingStatus::TargetingEnemy : ETargetingStatus::TargetingNoEnemy;
+		}
+		else
+		{
+			TargetingStatus = ETargetingStatus::NotTargeting;
+		}
 		bAutoRunning = false; // since it's a short press
 	}
 
@@ -222,10 +237,22 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 	// Notify ASC input released anyway 
 	GetAsc()->AbilityInputTagReleased(InputTag);
 	
-	if (!bTargeting && !bShiftKeyDown)
+	if (TargetingStatus != ETargetingStatus::TargetingEnemy && !bShiftKeyDown)
 	{
 		if (FollowTime <= ShortPressThreshold) // Treat as click ground
 		{
+			if (IsValid(ThisActor) && ThisActor->Implements<UHighlightInterface>())
+			{
+				IHighlightInterface::Execute_SetMoveToLocation(ThisActor, CachedDestination); // Override CachedDestination if this func overrided.
+			}
+			else
+			{
+				if (GetAsc() && !GetAsc()->HasMatchingGameplayTag(FAuraGameplayTags::GetInstance().Player_Block_InputPressed))
+				{
+					UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ClickNiagaraSystem, CachedDestination); // Click effect
+				}
+			}
+			
 			if (APawn* ControlledPawn = GetPawn())
 			{
 				UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), CachedDestination);
@@ -242,13 +269,9 @@ void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 				}
 			}
 			
-			if (GetAsc() && !GetAsc()->HasMatchingGameplayTag(FAuraGameplayTags::GetInstance().Player_Block_InputPressed))
-			{
-				UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ClickNiagaraSystem, CachedDestination);
-			}
 		}
 		FollowTime = 0.0f;
-		bTargeting = false;
+		TargetingStatus = ETargetingStatus::TargetingNoEnemy;
 	} // Release to Navigate
 }
 
@@ -270,7 +293,7 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 
 	// if targeting enemy,do not move, do asc
 	// bShiftKeyDown is only useful for LMB
-	if (bTargeting || bShiftKeyDown)
+	if (TargetingStatus == ETargetingStatus::TargetingEnemy || bShiftKeyDown)
 	{
 		if (GetAsc())
 		{

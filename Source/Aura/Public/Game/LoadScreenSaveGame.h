@@ -39,12 +39,45 @@ struct FSavedAbility
 	FGameplayTag AbilityType {};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	int32 AbilityLevel {};
+	int32 AbilityLevel = 1;
 
 	friend inline bool operator==(const FSavedAbility& Lhs, const FSavedAbility& Rhs)
 	{
 		return Lhs.AbilityTag == Rhs.AbilityTag;
 	}
+};
+
+USTRUCT(BlueprintType)
+struct FSavedActor
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FName ActorName {};
+
+	UPROPERTY()
+	FTransform Transform {};
+
+	// Serialized variables from the actor - only those marked with SaveGame specifier
+	UPROPERTY()
+	TArray<uint8> Bytes;
+
+	friend inline bool operator==(const FSavedActor Lhs, const FSavedActor Rhs)
+	{
+		return Lhs.ActorName == Rhs.ActorName;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FSavedMap
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString MapAssetName {};
+
+	UPROPERTY()
+	TArray<FSavedActor> SavedActors;
 };
 
 /**
@@ -66,7 +99,10 @@ public:
 	FString PlayerName { "Default Name" };
 
 	UPROPERTY()
-	FString MapName { "Default Map Name" };
+	FString MapName { "Default Map Name" }; // Display to Screen
+
+	UPROPERTY()
+	FString MapAssetName { "Default Map Asset Name" };
 
 	UPROPERTY()
 	FName PlayerStartTag;
@@ -105,4 +141,11 @@ public:
 	/* Abilities */
 	UPROPERTY()
 	TArray<FSavedAbility> SavedAbilities {};
+
+	/* Map */
+	UPROPERTY()
+	TArray<FSavedMap> SavedMaps {};
+
+	FSavedMap GetSavedMapWithMapName(const FString& InMapName) const;
+	bool HasMap(const FString& InMapName);
 };

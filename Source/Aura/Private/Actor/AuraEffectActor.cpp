@@ -7,6 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "ActiveGameplayEffectHandle.h"
+#include "Kismet/KismetMathLibrary.h"
 
 
 // Sets default values
@@ -23,6 +24,48 @@ void AAuraEffectActor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	InitialLoaction = GetActorLocation();
+	CalculatedLocation = InitialLoaction;
+	CalculatedRotation = GetActorRotation();
+}
+
+void AAuraEffectActor::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	RunningTime += DeltaSeconds;
+	if (RunningTime > SinePeriod)
+	{
+		RunningTime -= SinePeriod;
+	}
+	ItemMovement(DeltaSeconds);
+}
+
+void AAuraEffectActor::ItemMovement(float DeltaTime)
+{
+	if (bRotates)
+	{
+		const FRotator DeltaRotation(0.f, DeltaTime * RotationRate, 0.f);
+		CalculatedRotation = UKismetMathLibrary::ComposeRotators(CalculatedRotation, DeltaRotation);
+	}
+
+	if (bSinusoidalMovement)
+	{
+		const float Sine = SineAmplitude * FMath::Sin(SinePeriod);
+		CalculatedLocation = InitialLoaction + FVector(0.f, 0.f, Sine);
+	}
+}
+
+void AAuraEffectActor::StartSinusoidalMovement()
+{
+	bSinusoidalMovement = true;
+	InitialLoaction = GetActorLocation();
+	CalculatedLocation = InitialLoaction;
+}
+
+void AAuraEffectActor::StartRotation()
+{
+	bRotates = true;
+	CalculatedRotation = GetActorRotation();
 }
 
 void AAuraEffectActor::ApplyEffectToTarget(AActor* EffectTarget, const TSubclassOf<UGameplayEffect> GameplayEffectClass)

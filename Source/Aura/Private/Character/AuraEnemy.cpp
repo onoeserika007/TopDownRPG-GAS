@@ -109,22 +109,6 @@ void AAuraEnemy::BeginPlay()
 
 }
 
-void AAuraEnemy::HighlightActor()
-{
-	bHighlighted = true;
-	GetMesh()->SetRenderCustomDepth(true);
-	GetMesh()->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
-	Weapon->SetRenderCustomDepth(true);
-	Weapon->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
-}
-
-void AAuraEnemy::UnHighlightActor()
-{
-	GetMesh()->SetRenderCustomDepth(false);
-	Weapon->SetRenderCustomDepth(false);
-	bHighlighted = false;
-}
-
 void AAuraEnemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
 {
 	CombatTarget = InCombatTarget;
@@ -135,6 +119,27 @@ AActor* AAuraEnemy::GetCombatTarget_Implementation() const
 	return CombatTarget;
 }
 
+void AAuraEnemy::HighlightActor_Implementation()
+{
+	bHighlighted = true;
+	GetMesh()->SetRenderCustomDepth(true);
+	GetMesh()->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
+	Weapon->SetRenderCustomDepth(true);
+	Weapon->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
+}
+
+void AAuraEnemy::UnHighlightActor_Implementation()
+{
+	GetMesh()->SetRenderCustomDepth(false);
+	Weapon->SetRenderCustomDepth(false);
+	bHighlighted = false;
+}
+
+void AAuraEnemy::SetMoveToLocation_Implementation(FVector& OutDestination)
+{
+	// Do not change destination
+}
+
 int32 AAuraEnemy::GetPlayerLevel_Implementation() const
 {
 	return Level;
@@ -143,6 +148,8 @@ int32 AAuraEnemy::GetPlayerLevel_Implementation() const
 void AAuraEnemy::Die(const FVector& DeathImpulse)
 {
 	Super::Die(DeathImpulse);
+	SetLifeSpan(DeathLifeSpan);
+	SpawnLoot();
 	if (HasAuthority())
 	{
 		AuraAIController = !IsValid(AuraAIController)? Cast<AAuraAIController>(GetController()) : AuraAIController;

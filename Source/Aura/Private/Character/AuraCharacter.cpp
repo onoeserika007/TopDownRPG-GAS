@@ -95,6 +95,23 @@ int32 AAuraCharacter::GetPlayerLevel_Implementation() const
 	return Super::GetPlayerLevel();
 }
 
+void AAuraCharacter::Die(const FVector& DeathImpulse)
+{
+	Super::Die(DeathImpulse);
+
+	FTimerDelegate RespawnTimerDelegate;
+	RespawnTimerDelegate.BindLambda([this]()
+	{
+		AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this));
+		if (AuraGameMode)
+		{
+			AuraGameMode->PlayerRespawn(this);
+		}
+	});
+	GetWorldTimerManager().SetTimer(RespawnTimer, RespawnTimerDelegate, DeathLifeSpan, false);
+	TopDownCameraComponent->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+}
+
 void AAuraCharacter::AddToXP_Implementation(int32 InXP)
 {
 	if (AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>())
@@ -268,7 +285,7 @@ void AAuraCharacter::SaveProgress_Implementation(const FName& CheckpointTag)
 			SavedAbility.AbilitySlot = AuraASC->GetInputTagFromAbilityTag(AbilityTag);
 			SavedAbility.AbilityStatus = AuraASC->GetStatusFromAbilityTag(AbilityTag);
 			SavedAbility.AbilityTag = AbilityTag;
-			SavedAbility.AbilityType = Info.AbilityTag;
+			SavedAbility.AbilityType = Info.AbilityType;
 
 			SaveData->SavedAbilities.AddUnique(SavedAbility);
 		});
@@ -332,6 +349,11 @@ void AAuraCharacter::PossessedBy(AController* NewController)
 	// Init ability actor info for the server
 	InitAbilityActorInfo();
 	LoadProgress();
+
+	if (AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(this)))
+	{
+		AuraGameMode->LoadWorldState(GetWorld());
+	}
 }
 
 void AAuraCharacter::LoadProgress()

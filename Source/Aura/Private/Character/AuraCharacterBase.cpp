@@ -152,8 +152,6 @@ void AAuraCharacterBase::Die(const FVector& DeathImpulse)
 {
 	/** bInCallModify Whether to call Modify() on the components concerned when detaching */
 	Weapon->DetachFromComponent(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
-	
-	SetLifeSpan(DieLifeSpan);
 
 	MulticastHandleDeath(DeathImpulse);
 }

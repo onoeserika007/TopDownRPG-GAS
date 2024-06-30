@@ -32,6 +32,7 @@ public:
 	 * Combat Interface
 	 */
 	virtual int32 GetPlayerLevel_Implementation() const override;
+	virtual void Die(const FVector& DeathImpulse) override;
 
 	/**
 	 * Player Interface
@@ -69,4 +70,6 @@ private:
 	
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USpringArmComponent> CameraBoom;
+
+	FTimerHandle RespawnTimer;
 };

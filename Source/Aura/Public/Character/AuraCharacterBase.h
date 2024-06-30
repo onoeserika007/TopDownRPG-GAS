@@ -66,6 +66,10 @@ public:
 	virtual void OnRep_Burn();
 	
 	virtual void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	// Setters and Getters
+	UFUNCTION()
+	void SetCharacterClass(ECharacterClass InClass) { CharacterClass = InClass; }
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo();
@@ -127,6 +131,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Combat")
 	FName TailSocketName;
 
+	UPROPERTY(BlueprintReadOnly)
 	bool bDead = false;
 	
 	UPROPERTY(VisibleAnywhere)
@@ -186,6 +191,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Combat")
 	float MeleeAttackReach = 40.f;
 
+	UPROPERTY(EditAnywhere, Category="Combat")
+	float DeathLifeSpan = 3.0f;
+
 	int32 MinionCount = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Character Class Defaults")
@@ -200,7 +208,4 @@ private:
 
 	UPROPERTY(EditAnywhere, Category="Combat")
 	TObjectPtr<UAnimMontage> HitReactMontage;
-
-	UPROPERTY(EditAnywhere, Category="Combat")
-	float DieLifeSpan = 3.0f;
 };
